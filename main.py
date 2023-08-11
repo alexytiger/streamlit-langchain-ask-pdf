@@ -140,13 +140,11 @@ def main():
     
     pdf = st.file_uploader("Upload a PDF file", type="pdf")
 
-
-    if isinstance(pdf, io.IOBase):
-        file_name = pdf.name
-        print('pdf_file', file_name)
+    if pdf:
+        st.success("PDF file uploaded successfully!")
+        st.info("Processing the uploaded PDF...")
     else:
-        print("'pdf_file' is not a file object")
-        st.write("No file uploaded!") 
+        st.error("No file uploaded!") 
         return
     
 #important notice:
