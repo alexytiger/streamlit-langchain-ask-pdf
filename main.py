@@ -34,6 +34,7 @@ image_base64 = get_image_base64(image_path)
 
 bot_message = bot_template.replace("{{IMAGE}}", f'data:image/png;base64,{image_base64}')
 
+
 # Create a function to split the text into chunks
 def get_text_chunks(text, chunk_size, chunk_overlap):
     text_splitter = CharacterTextSplitter(
