@@ -81,7 +81,7 @@ def get_vector_database(text_chunks):
     vector_database = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     return vector_database
 
-def is_valid_question(question):
+def is_question_meaningful (question):
     # Check for minimum length
     if len(question) < 3:
         return False
@@ -141,6 +141,14 @@ def main():
     pdf = st.file_uploader("Upload a PDF file", type="pdf")
 
     if pdf:
+        # Check if the uploaded file is truly a PDF by inspecting the first few bytes
+        header = pdf.read(5).decode('latin-1')  # Read the first 5 bytes
+        if header != "%PDF-":
+            st.error("The uploaded file doesn't appear to be a valid PDF. Please upload a proper PDF file.")
+            return
+    
+        pdf.seek(0)  # Reset file pointer after reading
+        
         st.success("PDF file uploaded successfully!")
         st.info("Processing the uploaded PDF...")
     else:
@@ -186,7 +194,9 @@ def main():
     if text is None:
         st.warning("Please try uploading the PDF again or use a different file.")
         return
-
+    else:
+        st.success("PDF processed successfully!")
+        
     # Splitting up the text into smaller chunks for indexing
     chunks = get_text_chunks(text, 1000, 200)
     
@@ -195,7 +205,7 @@ def main():
     
     user_question = st.text_input("Ask a question about your PDF: ")
 
-    if user_question is not None and is_valid_question(user_question):
+    if user_question is not None and is_question_meaningful (user_question):
         with st.spinner(text="In progress..."):
             docs = knowledge_base.similarity_search(user_question)
     
