@@ -8,23 +8,29 @@
 # pip install tiktoken
 # pip install faiss-cpu
 
-from dotenv import load_dotenv
+# Standard libraries
 import os
 import io
-import streamlit as st
-from htmlTemplates import css, bot_template
 import base64
-from PIL import Image
 
+# Third-party libraries
+from dotenv import load_dotenv
+import streamlit as st
+from PIL import Image
 from PyPDF2 import PdfReader
+
+# LangChain-related imports (assuming they're third-party)
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
 from langchain.llms import OpenAI
- 
 
+# Your own modules
+from htmlTemplates import css, bot_template
+
+ 
 def get_image_base64(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
@@ -70,13 +76,6 @@ def main():
     # load our environment to read secrets
     load_dotenv()
 
-    # Load the OpenAI API key from the environment variable
-    if os.getenv("OPENAI_API_KEY") is None or os.getenv("OPENAI_API_KEY") == "":
-        print("OPENAI_API_KEY is not set")
-        exit(1)
-    else:
-        print("OPENAI_API_KEY is set")
-
 # This function sets the configuration options of the Streamlit's page.
 # Here, page_title="Ask your CSV" changes the default page title from "Streamlit" to "Ask your CSV".
 # The browser tab reflects this change.
@@ -86,9 +85,17 @@ def main():
 
     st.header("Ask your PDF")
     
+    # Load the OpenAI API key from the environment variable   
+    if os.getenv("OPENAI_API_KEY") is None or os.getenv("OPENAI_API_KEY") == "":
+        st.error("The OpenAI API key is not set. Please set it before proceeding.")
+        return #exit(1)
+    else:
+        st.toast("OpenAI API key is set and validated!")
+
+    
     # Sidebar contents
     with st.sidebar:
-        st.title('LLM Chat App')
+        st.title('LLM PDF Chat App')
         
         st.subheader("About")
    
@@ -98,7 +105,7 @@ def main():
         - [Streamlit](https://streamlit.io/)
         - [LangChain](https://python.langchain.com/)
         - [OpenAI](https://platform.openai.com/docs/models)
-        - [CSV Agent](https://python.langchain.com/docs/modules/agents/toolkits/csv)
+        - [QA over Document](https://python.langchain.com/docs/use_cases/question_answering/)
         """)
         
         robot_tiger = Image.open('img/ai-tiger-robot.jpeg')
