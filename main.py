@@ -71,6 +71,17 @@ def get_vector_database(text_chunks):
     vector_database = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     return vector_database
 
+def is_valid_question(question):
+    # Check for minimum length
+    if len(question) < 3:
+        return False
+    
+    # Check if the input is not just whitespace or special characters
+    if question.strip() == "" or all(not char.isalnum() for char in question):
+        return False
+
+    return False
+
 
 def main():
     # load our environment to read secrets
@@ -172,7 +183,7 @@ def main():
     
     user_question = st.text_input("Ask a question about your PDF: ")
 
-    if user_question is not None and user_question != "":
+    if user_question is not None and is_valid_question(user_question):
         with st.spinner(text="In progress..."):
             docs = knowledge_base.similarity_search(user_question)
     
@@ -199,6 +210,8 @@ def main():
                     
             st.write(bot_message.replace(
                         "{{MSG}}", response), unsafe_allow_html=True)
+    else:
+        st.warning("Please enter a meaningful question.")
             
   
 # def main():
