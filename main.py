@@ -55,15 +55,25 @@ def get_text_chunks(text, chunk_size, chunk_overlap):
 
 # Function to load the data from the pdf
 def get_pdf_text(uploaded_pdf):
-    # Set up the pdf reader
-    pdf_reader = PdfReader(uploaded_pdf)
+    text = ""
 
-    text =""
+    try:
+        # Set up the pdf reader
+        pdf_reader = PdfReader(uploaded_pdf)
 
-    for page in pdf_reader.pages:
-        text += page.extract_text()
+        for page in pdf_reader.pages:
+            page_text = page.extract_text()
+            if page_text:  # Check if the text extraction was successful for this page
+                text += page_text
+            else:
+                # Handle pages where text extraction failed
+                st.warning("Failed to extract text from one of the pages. The output might be incomplete.")
+    except Exception as e:
+        st.error(f"An error occurred while extracting text from the PDF: {str(e)}")
+        return None
 
     return text
+
 
 def get_vector_database(text_chunks):
     embeddings = OpenAIEmbeddings()
@@ -174,6 +184,10 @@ def main():
    # read data from the file and put them into a variable called text
    # get pdf text
     text = get_pdf_text(pdf)
+    
+    if text is None:
+        st.warning("Please try uploading the PDF again or use a different file.")
+        return
 
     # Splitting up the text into smaller chunks for indexing
     chunks = get_text_chunks(text, 1000, 200)
@@ -183,7 +197,7 @@ def main():
     
     user_question = st.text_input("Ask a question about your PDF: ")
 
-    if user_question is not None and is_valid_question(user_question):
+    if user_question is not None and user_question != "":
         with st.spinner(text="In progress..."):
             docs = knowledge_base.similarity_search(user_question)
     
