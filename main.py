@@ -90,7 +90,7 @@ def is_valid_question(question):
     if question.strip() == "" or all(not char.isalnum() for char in question):
         return False
 
-    return False
+    return True
 
 
 def main():
@@ -195,7 +195,7 @@ def main():
     
     user_question = st.text_input("Ask a question about your PDF: ")
 
-    if user_question is not None and user_question != "":
+    if user_question is not None and is_valid_question(user_question):
         with st.spinner(text="In progress..."):
             docs = knowledge_base.similarity_search(user_question)
     
