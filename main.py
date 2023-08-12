@@ -50,7 +50,21 @@ def get_text_chunks(text, chunk_size, chunk_overlap):
         length_function=len
     )
     chunks = text_splitter.split_text(text)
-    return chunks
+     # Remove empty chunks
+     # to understand this code her eis the explanation
+     # numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+     # squared_evens = [x**2 for x in numbers if x % 2 == 0]
+# Explanation:
+
+# x**2: This is the expression that will be evaluated for each item that meets the condition. 
+# It squares the number.
+# for x in numbers: This iterates over each item in the numbers list and assigns it to the variable x.
+# if x % 2 == 0: This is the condition. It checks if x is even. If the condition is true, 
+# the expression (x**2) will be evaluated and its result will be added to the new list. 
+# If the condition is false, the item is skipped.
+# result:
+# [4, 16, 36, 64, 100]
+    return [chunk for chunk in chunks if chunk]
 
 
 # Function to load the data from the pdf
@@ -67,7 +81,7 @@ def get_pdf_text(uploaded_pdf):
                 text += page_text
             else:
                 # Handle pages where text extraction failed
-                st.warning("Failed to extract text from one of the pages. The output might be incomplete.")
+                print("Failed to extract text from one of the pages. The output might be incomplete.")
     except Exception as e:
         st.error(f"An error occurred while extracting text from the PDF: {str(e)}")
         return None
@@ -77,8 +91,19 @@ def get_pdf_text(uploaded_pdf):
 
 def get_vector_database(text_chunks):
     embeddings = OpenAIEmbeddings()
-    # embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
-    vector_database = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
+    # Debug: Check the embeddings
+    print("Embeddings:", embeddings)
+    
+    # Debug: Check the length of each embedding
+    embeddings_lengths = [len(embed) for embed in embeddings]
+    print("Embedding Lengths:", embeddings_lengths)
+    
+    try:
+        vector_database = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
+    except Exception as e:
+        st.error(f"An error occurred while initializing the vector database: {str(e)}")
+        return None
+    
     return vector_database
 
 def is_question_meaningful (question):
@@ -109,7 +134,7 @@ def main():
     # Load the OpenAI API key from the environment variable   
     if os.getenv("OPENAI_API_KEY") is None or os.getenv("OPENAI_API_KEY") == "":
         st.error("The OpenAI API key is not set. Please set it before proceeding.")
-        return #exit(1)
+        return # exit(1)
     else:
         st.toast("OpenAI API key is set and validated!")
 
@@ -190,9 +215,10 @@ def main():
    # read data from the file and put them into a variable called text
    # get pdf text
     text = get_pdf_text(pdf)
-    
-    if text is None:
-        st.warning("Please try uploading the PDF again or use a different file.")
+
+    # This will catch both None and an empty string, as both are considered "falsy" in Python.
+    if not text:
+        st.error("Please try to upload a different PDF file. This one seems has a problems")
         return
     else:
         st.success("PDF processed successfully!")
@@ -202,6 +228,9 @@ def main():
     
     # get vector database
     knowledge_base =  get_vector_database(chunks)
+    if knowledge_base is None:
+        st.error("Failed to initialize the knowledge base.")
+        return
     
     user_question = st.text_input("Ask a question about your PDF: ")
 
