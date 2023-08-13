@@ -234,13 +234,20 @@ def main():
     
     user_question = st.text_input("Ask a question about your PDF: ")
 
-    if user_question is not None and is_question_meaningful (user_question):
+    if user_question is not None and is_question_meaningful(user_question):
         with st.spinner(text="In progress..."):
             docs = knowledge_base.similarity_search(user_question)
     
+            # yes, openai = OpenAI(model_name="text-davinci-003") is the same as openai = OpenAI(engine="davinci"). 
+            # which is the default
+            # The model_name parameter specifies the name of the LLM engine to use. And the engine parameter is just a shortcut for the model_name parameter.
+            # In this case, text-davinci-003 is the name of the LLM engine that is used by OpenAI. 
+            # It is the third version of the davinci engine, which is the most powerful engine available with the OpenAI class.
+            # So, if you want to use the davinci engine, you can use either model_name="text-davinci-003" or engine="davinci".
+            
             llm = OpenAI(temperature=0)
-            #! research more on chain_type="stuff" and other choices 
-            # # we are going to stuff all the docs in at once
+            
+            # #chain_type="stuff" means that we are going to stuff all the docs in at once
             chain = load_qa_chain(llm, chain_type="stuff")
             
             # The get_openai_callback() method returns a callback object 
