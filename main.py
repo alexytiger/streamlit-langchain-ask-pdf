@@ -247,7 +247,12 @@ def main():
             
             llm = OpenAI(temperature=0)
             
-            # #chain_type="stuff" means that we are going to stuff all the docs in at once
+            # The chain_type parameter in the load_qa_chain() function specifies the type of chain to use. 
+            # The stuff chain type is a new chain type that was introduced in LangChain 0.10.0. 
+            # It is a more efficient way to train and use chains for question answering tasks.
+            # The stuff chain type works by breaking the text of the documents into smaller chunks, 
+            # and then using the LLM to generate a response for each chunk. 
+            # The responses for the chunks are then stitched together to create a final response to the question.
             chain = load_qa_chain(llm, chain_type="stuff")
             
             # The get_openai_callback() method returns a callback object 
