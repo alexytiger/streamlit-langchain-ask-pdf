@@ -175,7 +175,6 @@ def main():
         pdf.seek(0)  # Reset file pointer after reading
         
         st.success("PDF file uploaded successfully!")
-        st.info("Processing the uploaded PDF...")
     else:
         st.error("No file uploaded!") 
         return
@@ -214,7 +213,9 @@ def main():
     
    # read data from the file and put them into a variable called text
    # get pdf text
-    text = get_pdf_text(pdf)
+    st.info("Start processing the uploaded PDF...")
+    with st.spinner(text="Wait for it..."):
+        text = get_pdf_text(pdf)
 
     # This will catch both None and an empty string, as both are considered "falsy" in Python.
     if not text:
