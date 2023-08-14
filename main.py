@@ -65,8 +65,12 @@ def get_text_chunks(text, chunk_size, chunk_overlap):
 # [4, 16, 36, 64, 100]
     return [chunk for chunk in chunks if chunk]
 
+# !!! The @st.cache decorator ensures that if the input (PDF content or text chunks) doesn't change, 
+# the functions return cached results without recomputation.
 
 # Function to load the data from the pdf
+# Cache the function results
+@st.cache_data
 def get_pdf_text(uploaded_pdf):
     text = ""
 
@@ -87,7 +91,7 @@ def get_pdf_text(uploaded_pdf):
 
     return text
 
-
+@st.cache_data
 def get_vector_database(text_chunks):
     embeddings = OpenAIEmbeddings()
     # Debug: Check the embeddings
@@ -178,108 +182,106 @@ def main():
         st.error("No file uploaded!") 
         return
     
-#important notice:
-# Yes, the Streamlit app will continue to run even if `return` is used in any function, 
- # including your `main()` function.
+    #important notice:
+    # Yes, the Streamlit app will continue to run even if `return` is used in any function, 
+    # including your `main()` function.
 
-#The important thing to understand here is that the `return` statement in Python 
-# just exits the current function and hands the program execution back to its caller. 
+    #The important thing to understand here is that the `return` statement in Python 
+    # just exits the current function and hands the program execution back to its caller. 
 
-#In the context of Streamlit, when a user interacts with an input widget (like your file uploader), 
-# the entire script gets rerun from top to bottom. 
-# So after returning from `main()`, Streamlit will immediately start over again 
-# from the top of your script, waiting for the next interaction.
+    #In the context of Streamlit, when a user interacts with an input widget (like your file uploader), 
+    # the entire script gets rerun from top to bottom. 
+    # So after returning from `main()`, Streamlit will immediately start over again 
+    # from the top of your script, waiting for the next interaction.
 
-#Here's a simple way to visualize it:
+    #Here's a simple way to visualize it:
 
-#'''
-#def main():
-    # some logic here
-#    return
+    #'''
+    #def main():
+        # some logic here
+    #    return
 
-# This part keeps running despite return in main()
-#if __name__ == "__main__":
-#    while True:
-#        main()
+    # This part keeps running despite return in main()
+    #if __name__ == "__main__":
+    #    while True:
+    #        main()
 
-#'''
+    #'''
 
 
-#So, while the `return` statement does end the `main()` function prematurely, 
-# the Streamlit application will not stop running due to the nature of the framework's execution model. 
-# It will still be active, waiting for further user interactions.
-    
-    
-   # read data from the file and put them into a variable called text
-   # get pdf text
-    with st.spinner(text="Processing PDF..."):
-        text = get_pdf_text(pdf)
+    #So, while the `return` statement does end the `main()` function prematurely, 
+    # the Streamlit application will not stop running due to the nature of the framework's execution model. 
+    # It will still be active, waiting for further user interactions.
+    # Only process if a PDF is uploaded and its content changes
+    if pdf:
+        pdf_content = pdf.getvalue()
+        previous_pdf_content = st.session_state.get("previous_pdf_content", None)
 
-    # This will catch both None and an empty string, as both are considered "falsy" in Python.
-    if not text:
-        st.error("Please try to upload a different PDF file. This one seems has a problems")
-        return
+        # Check if the PDF content is different from the previous one
+        if previous_pdf_content != pdf_content:
+            st.session_state.previous_pdf_content = pdf_content
+            with st.spinner(text="Processing PDF..."):
+                text = get_pdf_text(pdf)
+            with st.spinner(text="Creating vector database..."):
+                knowledge_base = get_vector_database(get_text_chunks(text, 1000, 200))
+        else:
+            text = get_pdf_text(pdf)
+            knowledge_base = get_vector_database(get_text_chunks(text, 1000, 200))
     else:
-        st.success("PDF processed successfully!")
-        
-    # Splitting up the text into smaller chunks for indexing
-    chunks = get_text_chunks(text, 1000, 200)
+        st.error("No file uploaded!") 
+        return    
     
-    # get vector database
-    with st.spinner(text="Creating vector database..."):
-        knowledge_base = get_vector_database(chunks)
-        
-    if knowledge_base is None:
-        st.error("Failed to initialize the vector database.")
-        return
-    else:
-        st.success("The vector database is ready!")
-        
+   
     user_question = st.text_input("Ask a meaningful question about your PDF: ")
 
-    if user_question is not None and is_question_meaningful(user_question):
-        with st.spinner(text="Searching for unswear..."):
-            docs = knowledge_base.similarity_search(user_question)
+    # Only process the user's question if it changes
+    previous_question = st.session_state.get("previous_question", None)
+    if user_question and user_question != previous_question:
+        st.session_state.previous_question = user_question
+           
+        if is_question_meaningful(user_question):
+            with st.spinner(text="Searching for unswear..."):
+                docs = knowledge_base.similarity_search(user_question)
+        
+                # yes, openai = OpenAI(model_name="text-davinci-003") is the same as openai = OpenAI(engine="davinci"). 
+                # which is the default
+                # The model_name parameter specifies the name of the LLM engine to use. And the engine parameter is just a shortcut for the model_name parameter.
+                # In this case, text-davinci-003 is the name of the LLM engine that is used by OpenAI. 
+                # It is the third version of the davinci engine, which is the most powerful engine available with the OpenAI class.
+                # So, if you want to use the davinci engine, you can use either model_name="text-davinci-003" or engine="davinci".
+                
+                llm = OpenAI(temperature=0)
+                
+                # The chain_type parameter in the load_qa_chain() function specifies the type of chain to use. 
+                # The stuff chain type is a new chain type that was introduced in LangChain 0.10.0. 
+                # It is a more efficient way to train and use chains for question answering tasks.
+                # The stuff chain type works by breaking the text of the documents into smaller chunks, 
+                # and then using the LLM to generate a response for each chunk. 
+                # The responses for the chunks are then stitched together to create a final response to the question.
+                chain = load_qa_chain(llm, chain_type="stuff")
+                
+                # The get_openai_callback() method returns a callback object 
+                # that can be used to track the progress of the run() method. 
+                # The callback object will be called periodically during the execution of the run() method 
+                # and will provide information about the progress of the method.
+
+                # The callback object has the following methods:
+
+                # on_begin(): This method is called when the run() method starts.
+                # on_progress(): This method is called periodically during the execution of the run() method.
+                # on_done(): This method is called when the run() method finishes.
+                with get_openai_callback() as cb:
+                    try:
+                        response = chain.run(input_documents=docs, question=user_question, callback=cb)
+                    except Exception as e:
+                        st.error("An error occurred: {}".format(str(e)))
+                        
+                st.write(bot_message.replace(
+                            "{{MSG}}", response), unsafe_allow_html=True)
+        else:
+            st.warning("Please enter a meaningful question.")
+                
     
-            # yes, openai = OpenAI(model_name="text-davinci-003") is the same as openai = OpenAI(engine="davinci"). 
-            # which is the default
-            # The model_name parameter specifies the name of the LLM engine to use. And the engine parameter is just a shortcut for the model_name parameter.
-            # In this case, text-davinci-003 is the name of the LLM engine that is used by OpenAI. 
-            # It is the third version of the davinci engine, which is the most powerful engine available with the OpenAI class.
-            # So, if you want to use the davinci engine, you can use either model_name="text-davinci-003" or engine="davinci".
-            
-            llm = OpenAI(temperature=0)
-            
-            # The chain_type parameter in the load_qa_chain() function specifies the type of chain to use. 
-            # The stuff chain type is a new chain type that was introduced in LangChain 0.10.0. 
-            # It is a more efficient way to train and use chains for question answering tasks.
-            # The stuff chain type works by breaking the text of the documents into smaller chunks, 
-            # and then using the LLM to generate a response for each chunk. 
-            # The responses for the chunks are then stitched together to create a final response to the question.
-            chain = load_qa_chain(llm, chain_type="stuff")
-            
-            # The get_openai_callback() method returns a callback object 
-            # that can be used to track the progress of the run() method. 
-            # The callback object will be called periodically during the execution of the run() method 
-            # and will provide information about the progress of the method.
-
-            # The callback object has the following methods:
-
-            # on_begin(): This method is called when the run() method starts.
-            # on_progress(): This method is called periodically during the execution of the run() method.
-            # on_done(): This method is called when the run() method finishes.
-            with get_openai_callback() as cb:
-                try:
-                    response = chain.run(input_documents=docs, question=user_question, callback=cb)
-                except Exception as e:
-                    st.error("An error occurred: {}".format(str(e)))
-                    
-            st.write(bot_message.replace(
-                        "{{MSG}}", response), unsafe_allow_html=True)
-    else:
-        st.warning("Please enter a meaningful question.")
-            
-  
 # def main():
 #     print("Hello world!")
 
