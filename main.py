@@ -10,7 +10,6 @@
 
 # Standard libraries
 import os
-import io
 import base64
 
 # Third-party libraries
@@ -213,7 +212,7 @@ def main():
     
    # read data from the file and put them into a variable called text
    # get pdf text
-    with st.spinner(text="Start processing the uploaded PDF..."):
+    with st.spinner(text="Processing PDF..."):
         text = get_pdf_text(pdf)
 
     # This will catch both None and an empty string, as both are considered "falsy" in Python.
@@ -227,14 +226,14 @@ def main():
     chunks = get_text_chunks(text, 1000, 200)
     
     # get vector database
-    with st.spinner(text="Storing document data into vector database..."):
+    with st.spinner(text="Creating vector database..."):
         knowledge_base = get_vector_database(chunks)
         
     if knowledge_base is None:
         st.error("Failed to initialize the vector database.")
         return
     else:
-        st.success("The vector database created successfully!")
+        st.success("The vector database is ready!")
         
     user_question = st.text_input("Ask a meaningful question about your PDF: ")
 
