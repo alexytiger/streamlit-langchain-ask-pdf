@@ -213,8 +213,7 @@ def main():
     
    # read data from the file and put them into a variable called text
    # get pdf text
-    st.info("Start processing the uploaded PDF...")
-    with st.spinner(text="Wait for it..."):
+    with st.spinner(text="Start processing the uploaded PDF..."):
         text = get_pdf_text(pdf)
 
     # This will catch both None and an empty string, as both are considered "falsy" in Python.
@@ -228,15 +227,19 @@ def main():
     chunks = get_text_chunks(text, 1000, 200)
     
     # get vector database
-    knowledge_base =  get_vector_database(chunks)
+    with st.spinner(text="Storing document data into vector database..."):
+        knowledge_base = get_vector_database(chunks)
+        
     if knowledge_base is None:
-        st.error("Failed to initialize the knowledge base.")
+        st.error("Failed to initialize the vector database.")
         return
-    
-    user_question = st.text_input("Ask a question about your PDF: ")
+    else:
+        st.success("The vector database created successfully!")
+        
+    user_question = st.text_input("Ask a meaningful question about your PDF: ")
 
     if user_question is not None and is_question_meaningful(user_question):
-        with st.spinner(text="In progress..."):
+        with st.spinner(text="Searching for unswear..."):
             docs = knowledge_base.similarity_search(user_question)
     
             # yes, openai = OpenAI(model_name="text-davinci-003") is the same as openai = OpenAI(engine="davinci"). 
