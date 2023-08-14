@@ -11,14 +11,15 @@
 # Standard libraries
 import os
 import base64
+import logging
 
 # Third-party libraries
-from dotenv import load_dotenv
 import streamlit as st
+from dotenv import load_dotenv
 from PIL import Image
 from PyPDF2 import PdfReader
 
-# LangChain-related imports (assuming they're third-party)
+# LangChain-related imports
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
@@ -26,10 +27,9 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
 from langchain.llms import OpenAI
 
-# Your own modules
+# Custom imports
 from htmlTemplates import css, bot_template
 
- 
 def get_image_base64(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
@@ -84,7 +84,7 @@ def get_pdf_text(uploaded_pdf):
                 text += page_text
             else:
                 # Handle pages where text extraction failed
-                print("Failed to extract text from one of the pages. The output might be incomplete.")
+                logging.error("Failed to extract text from one of the pages. The output might be incomplete.")
     except Exception as e:
         st.error(f"An error occurred while extracting text from the PDF: {str(e)}")
         return None
@@ -95,11 +95,11 @@ def get_pdf_text(uploaded_pdf):
 def get_vector_database(text_chunks):
     embeddings = OpenAIEmbeddings()
     # Debug: Check the embeddings
-    print("Embeddings:", embeddings)
+    logging.debug("Embeddings:", embeddings)
     
     # Debug: Check the length of each embedding
     embeddings_lengths = [len(embed) for embed in embeddings]
-    print("Embedding Lengths:", embeddings_lengths)
+    logging.debug("Embedding Lengths:", embeddings_lengths)
     
     try:
         vector_database = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
